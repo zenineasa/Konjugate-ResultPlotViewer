@@ -1,6 +1,6 @@
 /* Copyright © 2026 Zenin Easa Panthakkalakath */
 
-import { seriesToCsv } from '../../src/resultExport.mjs';
+import { seriesToCsv } from './csvExport.mjs';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const selectedSignals = new Set();
