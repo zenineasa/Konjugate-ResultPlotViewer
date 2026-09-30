@@ -40,6 +40,13 @@ jobs:
             - name: Install Konjugate core's dependencies
               working-directory: konjugate
               run: npm ci
+            # Builds the add-on itself and statically checks every relative import/script/stylesheet
+            # reference in the built archive resolves to a file actually inside it (see
+            # tests/archiveImports.test.mjs -- this is what would have caught the sibling
+            # Konjugate-PoseVisualizer repo's missing-vendor-file bug).
+            - name: Run tests
+              working-directory: konjugate-resultplotviewer
+              run: npm test
             - name: Build the add-on
               working-directory: konjugate-resultplotviewer
               run: npm run build
