@@ -1,6 +1,14 @@
 # Konjugate Results Analysis
 
-A [Konjugate](https://github.com/zenineasa/Konjugate) add-on for comparing and exploring simulation result signals -- time-series, scatter and distribution plots (via Plotly), signal search, live pacing controls, and CSV export.
+A [Konjugate](https://github.com/zenineasa/Konjugate) add-on for comparing and exploring simulation result signals, with signal search, live pacing controls, and CSV export. Charts are drawn with Plotly:
+
+| Chart | Shows | Options |
+| --- | --- | --- |
+| Time series | Signals against time; click to move the timeline there | Overlaid on one plot, or stacked in rows by unit or by signal |
+| Scatter | One signal against another, revealed up to the current time | Points or a joined trajectory; a Z signal for 3D; colour and size by further signals |
+| Distribution | How each signal's values are spread, up to the current time | Histogram, box or violin |
+| Spectrum | The amplitude of each frequency in each signal, over the whole run | Linear or logarithmic amplitude |
+| Correlation | How strongly each pair of selected signals moves together, over the whole run; click a cell to open that pair as a scatter | |
 
 ## Installing
 

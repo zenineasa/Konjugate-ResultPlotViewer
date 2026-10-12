@@ -27,11 +27,15 @@
                 <option value="timeSeries" selected>Time series</option>
                 <option value="scatter">Scatter</option>
                 <option value="distribution">Distribution</option>
+                <option value="spectrum">Spectrum</option>
+                <option value="correlation">Correlation</option>
             </select></label>
+            <label id="chartVariantField" class="chartModeField"><span id="chartVariantLabel">Layout</span><select id="chartVariant" aria-label="Chart option"></select></label>
             <button id="resetTrail" type="button" hidden>Reset trail</button>
             <div id="scatterPickers" class="scatterPickers" hidden>
                 <label><span>X axis</span><select id="scatterX" aria-label="Scatter X axis signal"></select></label>
                 <label><span>Y axis</span><select id="scatterY" aria-label="Scatter Y axis signal"></select></label>
+                <label><span>Z axis (3D)</span><select id="scatterZ" aria-label="Scatter Z axis signal"><option value="">None</option></select></label>
                 <label><span>Color by</span><select id="scatterColor" aria-label="Scatter color-by signal"><option value="">None</option></select></label>
                 <label><span>Size by</span><select id="scatterSize" aria-label="Scatter size-by signal"><option value="">None</option></select></label>
             </div>

@@ -1,6 +1,6 @@
 /* Copyright © 2026 Zenin Easa Panthakkalakath */
 
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { konjugateModule, repoRoot } from './konjugatePaths.mjs';
@@ -36,6 +36,9 @@ const archive = createPackageArchive({
 });
 
 await mkdir(outputDirectory, { recursive: true });
+for (const name of await readdir(outputDirectory)) {
+    if (name.endsWith('.kja')) await rm(join(outputDirectory, name));
+}
 const target = join(outputDirectory, `${manifest.addonId}-${manifest.version}.kja`);
 await writeFile(target, archive);
 console.log(`Built ${target}`);

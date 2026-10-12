@@ -20,8 +20,8 @@
     "contributes": {
         "toolstrip": [{
             "commandId": "openAnalysis",
-            "label": "Analysis",
-            "tooltip": "Open Results Analysis",
+            "label": "Charts",
+            "tooltip": "Open result charts",
             "symbol": "⌁",
             "when": "resultsActive",
             "contexts": ["resultSession"]

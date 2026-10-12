@@ -1,6 +1,6 @@
 {
   "name": "konjugate-resultplotviewer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
   "description": "A Plotly-backed results analysis add-on for Konjugate.",
@@ -9,6 +9,6 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "install:dev": "node scripts/build.mjs && node scripts/installDev.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs"
   }
 }
