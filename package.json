@@ -1,6 +1,7 @@
 {
   "name": "konjugate-resultplotviewer",
   "version": "1.0.2",
+  "minimumKonjugateVersion": "1.1.15",
   "private": true,
   "type": "module",
   "description": "A Plotly-backed results analysis add-on for Konjugate.",
