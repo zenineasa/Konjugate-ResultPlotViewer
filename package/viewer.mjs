@@ -4,12 +4,14 @@ import {
     buildCorrelationFigure, buildDistributionFigure, buildScatterFigure, buildSpectrumFigure,
     buildTimeSeriesFigure, cursorShape, trailUpdate
 } from './charts.mjs';
+import { controlSeries, controlSignals, isControlSignalId, parseSignalId } from './controlSignals.mjs';
 import { seriesToCsv } from './csvExport.mjs';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const selectedSignals = new Set();
 let context = null;
 let signals = [];
+let controlEntries = []; // the parameters changed during the run, from the host's getParameterChanges (none on a Konjugate without it)
 let plotReady = false;
 let pendingLiveRender = null;
 let liveRenderRequested = false;
@@ -53,7 +55,10 @@ function scheduleLiveRender() {
         if (!liveRenderRequested || plotRendering || document.hidden) return;
         liveRenderRequested = false;
         plotRendering = true;
-        try { await renderPlot(); } finally {
+        try {
+            await refreshControls();
+            await renderPlot();
+        } finally {
             plotRendering = false;
             if (liveRenderRequested) scheduleLiveRender();
         }
@@ -63,7 +68,7 @@ function scheduleLiveRender() {
 function buildFigure(series, time) {
     const variant = chartVariant[chartMode];
     if (chartMode === 'scatter') {
-        const [xId, yId, zId, colorId, sizeId] = scatterSelectors.map((selector) => Number($(selector).value) || null);
+        const [xId, yId, zId, colorId, sizeId] = scatterSelectors.map((selector) => parseSignalId($(selector).value));
         return buildScatterFigure(series, { xId, yId, zId, colorId, sizeId, time, style: variant });
     }
     if (chartMode === 'distribution') return buildDistributionFigure(series, { time, style: variant });
@@ -83,7 +88,7 @@ function applyTrail(time) {
 
 function currentSignalIds() {
     if (chartMode === 'scatter') {
-        return [...new Set(scatterSelectors.map((selector) => $(selector).value).filter(Boolean).map(Number))];
+        return [...new Set(scatterSelectors.map((selector) => parseSignalId($(selector).value)).filter((id) => id !== null))];
     }
     return [...selectedSignals];
 }
@@ -106,10 +111,45 @@ function onPlotClick(figure, event) {
     }
 }
 
+// Every signal's series: the states from the host, the controls from their recorded changes. A chart against time takes a
+// control as recorded; the others, and the CSV, need it at the samples' times, so it is read at those.
+async function readAllSeries(signalIds, maxPoints) {
+    const stateIds = signalIds.filter((id) => !isControlSignalId(id));
+    const controlIds = signalIds.filter(isControlSignalId);
+    const resample = chartMode !== 'timeSeries' || maxPoints === Infinity;
+    const states = stateIds.length ? await window.konjugateVisualizer.readSeries(stateIds, { maxPoints }) : [];
+    let sampleTimes = states[0]?.samples.map((sample) => sample.time) ?? null;
+    if (!sampleTimes && controlIds.length && resample && signals[0]) {
+        sampleTimes = (await window.konjugateVisualizer.readSeries([signals[0].signalId], { maxPoints }))[0]?.samples.map((sample) => sample.time) ?? null;
+    }
+    const controls = controlIds.flatMap((id) => {
+        const entry = controlEntries.find((candidate) => controlSignals([candidate])[0].signalId === id);
+        return entry ? [controlSeries(entry, resample ? sampleTimes : null)] : [];
+    });
+    const byId = new Map([...states, ...controls].map((item) => [item.signalId, item]));
+    return signalIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
+async function loadControls() {
+    const fetch = window.konjugateVisualizer.getParameterChanges;
+    controlEntries = typeof fetch === 'function' ? await fetch().catch(() => []) : [];
+}
+
+// A live run can have its controls changed at any moment: take the changes again, and the browser anew when a parameter first appears.
+async function refreshControls() {
+    if (typeof window.konjugateVisualizer.getParameterChanges !== 'function') return;
+    const before = controlEntries.map((entry) => entry.parameterId).join();
+    await loadControls();
+    if (controlEntries.map((entry) => entry.parameterId).join() === before) return;
+    signals = [...signals.filter((signal) => !signal.control), ...controlSignals(controlEntries)];
+    renderSignalBrowser($('#signalSearch').value);
+    renderScatterPickers();
+}
+
 async function renderPlot() {
     const signalIds = currentSignalIds();
     const missingScatterAxis = chartMode === 'scatter' && (!$('#scatterX').value || !$('#scatterY').value);
-    const series = missingScatterAxis ? [] : await window.konjugateVisualizer.readSeries(signalIds, { maxPoints: 5000 });
+    const series = missingScatterAxis ? [] : await readAllSeries(signalIds, 5000);
     const figure = series.length ? buildFigure(series, context.time) : null;
     $('.plotWorkspace').classList.toggle('hasSignals', Boolean(figure));
     $('#emptyPlot strong').textContent = chartModes[chartMode].empty;
@@ -159,7 +199,9 @@ function applyChartModeVisibility() {
 
 function renderSignalBrowser(filter = '') {
     const normalizedFilter = filter.trim().toLowerCase();
-    const groups = Map.groupBy(signals.filter((signal) => `${signal.entityName} ${signal.name} ${signal.symbol} ${signal.unit}`.toLowerCase().includes(normalizedFilter)), (signal) => signal.entityId);
+    // The controls come first: they are few, and would otherwise sit below every node's states.
+    const shown = signals.filter((signal) => `${signal.entityName} ${signal.name} ${signal.symbol} ${signal.unit}`.toLowerCase().includes(normalizedFilter));
+    const groups = Map.groupBy([...shown.filter((signal) => signal.control), ...shown.filter((signal) => !signal.control)], (signal) => signal.entityId);
     const container = $('#signalGroups');
     container.replaceChildren();
     groups.forEach((items, entityId) => {
@@ -199,7 +241,8 @@ function renderSignalBrowser(filter = '') {
 async function loadSession() {
     context = await window.konjugateVisualizer.getContext();
     if (!context) return;
-    signals = await window.konjugateVisualizer.listSignals();
+    await loadControls();
+    signals = [...await window.konjugateVisualizer.listSignals(), ...controlSignals(controlEntries)];
     selectedSignals.clear();
     signals.filter((signal) => signal.entityId === context.selectedNodeId).forEach((signal) => selectedSignals.add(signal.signalId));
     $('#projectName').textContent = context.projectName;
@@ -237,9 +280,7 @@ $('#resetTrail').addEventListener('click', () => window.konjugateVisualizer.seek
 $('#exportCsv').addEventListener('click', async () => {
     const signalIds = currentSignalIds();
     if (!signalIds.length) return;
-    const series = await window.konjugateVisualizer.readSeries(signalIds, { maxPoints: Infinity });
-    const byId = new Map(series.map((item) => [item.signalId, item]));
-    const orderedSeries = signalIds.map((id) => byId.get(id)).filter(Boolean);
+    const orderedSeries = await readAllSeries(signalIds, Infinity);
     const csvSignals = orderedSeries.map((item) => ({
         signalId: item.signalId,
         header: `${item.entityName} — ${item.name}${item.unit ? ` (${item.unit})` : ''}`

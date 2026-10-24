@@ -10,6 +10,8 @@ A [Konjugate](https://github.com/zenineasa/Konjugate) add-on for comparing and e
 | Spectrum | The amplitude of each frequency in each signal, over the whole run | Linear or logarithmic amplitude |
 | Correlation | How strongly each pair of selected signals moves together, over the whole run; click a cell to open that pair as a scatter | |
 
+Parameters that were changed while the run was going (by a live control or a schedule) appear as signals in a "Controls" group, with nothing added when none were. They need Konjugate 1.2.3 or later. Charts against time draw them as the changes happened; the other charts and the CSV export read their value at each sample's time.
+
 ## Installing
 
 Open Konjugate's Extensions dialog, switch to Discover, and install "Results Analysis" from there.
